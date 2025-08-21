@@ -5671,7 +5671,7 @@ EOF
 esac
 
 case "$target:$tm_file" in
-  powerpc64*-*-freebsd* | powerpc64*-*-linux* | powerpc*-*-linux*rs6000/biarch64.h*)
+  powerpc64*-*-freebsd* | powerpc64-*-celloslv2 | powerpc64*-*-linux* | powerpc*-*-linux*rs6000/biarch64.h*)
   case "$target" in
      *le-*-linux*)
      emul_name="-melf64lppc"
@@ -5684,6 +5684,9 @@ case "$target:$tm_file" in
       ;;
      *-*-freebsd*)
      emul_name="-melf64ppc_fbsd"
+      ;;
+    *-*-linux*)
+     emul_name="-melf64ppc_celloslv2"
       ;;
   esac
     AC_CACHE_CHECK(linker support for omitting dot symbols,

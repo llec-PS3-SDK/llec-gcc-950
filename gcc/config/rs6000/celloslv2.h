@@ -263,16 +263,18 @@ extern int dot_symbols;
 #define FBSD_TARGET_CPU_CPP_BUILTINS()			\
   do							\
     {							\
-      builtin_define ("__PPC__");			\
-      builtin_define ("__ppc__");			\
-      builtin_define ("__powerpc__");	\
-      builtin_define ("__PPU__");			\
-      builtin_define ("__lv2ppu__");	\
-      builtin_define ("__powerpc__");	\
+      builtin_define ("__PPC__");			   \
+      builtin_define ("__ppc__");			   \
+      builtin_define ("__powerpc__");	   \
+      builtin_define ("__PPU__");			   \
+      builtin_define ("__lv2ppu__");	   \
+      builtin_define ("__CELLOS_LV2__"); \
+      builtin_define ("__LP32__");			 \
+      builtin_define ("__powerpc__");	   \
       if (TARGET_64BIT)					\
 	{						\
 	  builtin_define ("__arch64__");		\
-	  builtin_define ("__LP64__");			\
+	  //builtin_define ("__LP64__");			\
 	  builtin_define ("__PPC64__");			\
 	  builtin_define ("__powerpc64__");		\
 	  builtin_assert ("cpu=powerpc64");		\

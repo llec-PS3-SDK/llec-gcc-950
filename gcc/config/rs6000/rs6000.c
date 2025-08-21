@@ -3866,8 +3866,13 @@ rs6000_option_override_internal (bool global_init_p)
   /* Set the pointer size.  */
   if (TARGET_64BIT)
     {
+#ifndef POWERPC_CELLOSLV2
       rs6000_pmode = DImode;
       rs6000_pointer_size = 64;
+#else
+      rs6000_pmode = SImode;
+      rs6000_pointer_size = 32;
+#endif
     }
   else
     {

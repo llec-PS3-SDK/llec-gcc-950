@@ -1363,7 +1363,7 @@ case $os in
 	     | powermax* | dnix* | nx6 | nx7 | sei* | dragonfly* \
 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
-	     | midnightbsd* | amdhsa* | unleashed* | emscripten*)
+	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | celloslv2*)
 	# Remember, each alternative MUST END IN *, to match a version number.
 		;;
 	qnx*)
@@ -1510,6 +1510,9 @@ case $os in
 	none)
 		;;
 	*-eabi)
+		;;
+	celloslv2)
+		os=celloslv2
 		;;
 	*)
 		echo Invalid configuration \`"$1"\': system \`"$os"\' not recognized 1>&2

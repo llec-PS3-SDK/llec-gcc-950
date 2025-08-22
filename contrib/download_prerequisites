@@ -1,5 +1,5 @@
 #! /bin/sh
-#! -*- coding:utf-8; mode:shell-script; -*-
+w#! -*- coding:utf-8; mode:shell-script; -*-
 
 # Download some prerequisites needed by GCC.
 # Run this from the top level of the GCC source tree and the GCC build will do
@@ -32,7 +32,7 @@ mpfr='mpfr-3.1.4.tar.bz2'
 mpc='mpc-1.0.3.tar.gz'
 isl='isl-0.18.tar.bz2'
 
-base_url='ftp://gcc.gnu.org/pub/gcc/infrastructure/'
+base_url='https://gcc.gnu.org/pub/gcc/infrastructure/'
 
 echo_archives() {
     echo "${gmp}"

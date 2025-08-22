@@ -1,5 +1,6 @@
-/* Definitions for 64-bit PowerPC running FreeBSD using the ELF format
-   Copyright (C) 2012-2019 Free Software Foundation, Inc.
+/* Definitions of target machine for GNU compiler,
+   for 64 bit PowerPC linux.
+   Copyright (C) 2000-2017 Free Software Foundation, Inc.
 
    This file is part of GCC.
 
@@ -13,15 +14,29 @@
    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
    License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with GCC; see the file COPYING3.  If not see
+   Under Section 7 of GPL version 3, you are granted additional
+   permissions described in the GCC Runtime Library Exception, version
+   3.1, as published by the Free Software Foundation.
+
+   You should have received a copy of the GNU General Public License and
+   a copy of the GCC Runtime Library Exception along with this program;
+   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
-/* Undef gnu-user.h macros we don't want.  */
-#undef CPLUSPLUS_CPP_SPEC
-#undef LINK_GCC_C_SEQUENCE_SPEC
+#ifndef RS6000_BI_ARCH
 
-/* Override the defaults, which exist to force the proper definition.  */
+#undef	TARGET_64BIT
+#define	TARGET_64BIT 1
+
+#define	DEFAULT_ARCH64_P 1
+#define	RS6000_BI_ARCH_P 0
+
+#else
+
+#define	DEFAULT_ARCH64_P (TARGET_DEFAULT & MASK_64BIT)
+#define	RS6000_BI_ARCH_P 1
+
+#endif
 
 #ifdef IN_LIBGCC2
 #undef TARGET_64BIT
@@ -42,6 +57,9 @@ extern int dot_symbols;
 #define DOT_SYMBOLS dot_symbols
 #endif
 
+#undef TARGET_KEEP_LEAF_WHEN_PROFILED
+#define TARGET_KEEP_LEAF_WHEN_PROFILED rs6000_keep_leaf_when_profiled
+
 #define TARGET_USES_LINUX64_OPT 1
 #ifdef HAVE_LD_LARGE_TOC
 #undef TARGET_CMODEL
@@ -51,7 +69,6 @@ extern int dot_symbols;
 #define SET_CMODEL(opt) do {} while (0)
 #endif
 
-/* Until now the 970 is the only Processor where FreeBSD 64-bit runs on.  */
 #undef  PROCESSOR_DEFAULT
 #define PROCESSOR_DEFAULT PROCESSOR_CELL
 #undef  PROCESSOR_DEFAULT64
@@ -63,26 +80,25 @@ extern int dot_symbols;
 #define RELOCATABLE_NEEDS_FIXUP \
   (rs6000_isa_flags & rs6000_isa_flags_explicit & OPTION_MASK_RELOCATABLE)
 
-#undef  RS6000_ABI_NAME
-#define RS6000_ABI_NAME "celloslv2"
+#undef	RS6000_ABI_NAME
+#define	RS6000_ABI_NAME "linux"
 
-#define INVALID_64BIT "-m%s not supported in this configuration"
+#define INVALID_64BIT "%<-m%s%> not supported in this configuration"
 #define INVALID_32BIT INVALID_64BIT
 
-/* Use LINUX64 instead of FREEBSD64 for compat with e.g. sysv4le.h */
 #ifdef LINUX64_DEFAULT_ABI_ELFv2
 #define ELFv2_ABI_CHECK (rs6000_elf_abi != 1)
 #else
 #define ELFv2_ABI_CHECK (rs6000_elf_abi == 2)
 #endif
 
-#undef  SUBSUBTARGET_OVERRIDE_OPTIONS
-#define SUBSUBTARGET_OVERRIDE_OPTIONS				\
+#undef	SUBSUBTARGET_OVERRIDE_OPTIONS
+#define	SUBSUBTARGET_OVERRIDE_OPTIONS				\
   do								\
     {								\
       if (!global_options_set.x_rs6000_alignment_flags)		\
 	rs6000_alignment_flags = MASK_ALIGN_NATURAL;		\
-      if (TARGET_64BIT)						\
+      if (rs6000_isa_flags & OPTION_MASK_64BIT)			\
 	{							\
 	  if (DEFAULT_ABI != ABI_AIX)				\
 	    {							\
@@ -90,16 +106,16 @@ extern int dot_symbols;
 	      error (INVALID_64BIT, "call");			\
 	    }							\
 	  dot_symbols = !strcmp (rs6000_abi_name, "aixdesc");	\
-	  if (rs6000_isa_flags & OPTION_MASK_RELOCATABLE)	\
-	    {							\
-	      rs6000_isa_flags &= ~OPTION_MASK_RELOCATABLE;	\
-	      error (INVALID_64BIT, "relocatable");		\
-	    }							\
 	  if (ELFv2_ABI_CHECK)					\
 	    {							\
 	      rs6000_current_abi = ABI_ELFv2;			\
 	      if (dot_symbols)					\
 		error ("%<-mcall-aixdesc%> incompatible with %<-mabi=elfv2%>"); \
+	    }							\
+	  if (rs6000_isa_flags & OPTION_MASK_RELOCATABLE)	\
+	    {							\
+	      rs6000_isa_flags &= ~OPTION_MASK_RELOCATABLE;	\
+	      error (INVALID_64BIT, "relocatable");		\
 	    }							\
 	  if (rs6000_isa_flags & OPTION_MASK_EABI)		\
 	    {							\
@@ -116,12 +132,12 @@ extern int dot_symbols;
 	      rs6000_isa_flags |= OPTION_MASK_POWERPC64;	\
 	      error ("%<-m64%> requires a PowerPC64 cpu");		\
 	    }							\
-	   if ((rs6000_isa_flags_explicit			\
-		& OPTION_MASK_MINIMAL_TOC) != 0)		\
+	  if ((rs6000_isa_flags_explicit			\
+	       & OPTION_MASK_MINIMAL_TOC) != 0)			\
 	    {							\
 	      if (global_options_set.x_rs6000_current_cmodel	\
 		  && rs6000_current_cmodel != CMODEL_SMALL)	\
-		error ("%<-mcmodel%> incompatible with other toc options"); \
+		error ("%<-mcmodel incompatible with other toc options%>"); \
 	      SET_CMODEL (CMODEL_SMALL);			\
 	    }							\
 	  else							\
@@ -130,9 +146,29 @@ extern int dot_symbols;
 		SET_CMODEL (CMODEL_SMALL);			\
 	      if (rs6000_current_cmodel != CMODEL_SMALL)	\
 		{						\
-		  TARGET_NO_FP_IN_TOC = 0;			\
-		  TARGET_NO_SUM_IN_TOC = 0;			\
+		  if (!global_options_set.x_TARGET_NO_FP_IN_TOC) \
+		    TARGET_NO_FP_IN_TOC				\
+		      = rs6000_current_cmodel == CMODEL_MEDIUM;	\
+		  if (!global_options_set.x_TARGET_NO_SUM_IN_TOC) \
+		    TARGET_NO_SUM_IN_TOC = 0;			\
 		}						\
+	    }							\
+	  if (TARGET_PLTSEQ && DEFAULT_ABI != ABI_ELFv2)	\
+	    {							\
+	      if (global_options_set.x_rs6000_pltseq)		\
+		warning (0, "%qs unsupported for this ABI",	\
+			 "-mpltseq");				\
+	      rs6000_pltseq = false;				\
+	    }							\
+	}							\
+      else							\
+	{							\
+	  if (!RS6000_BI_ARCH_P)				\
+	    error (INVALID_32BIT, "32");			\
+	  if (global_options_set.x_rs6000_current_cmodel)	\
+	    {							\
+	      SET_CMODEL (CMODEL_SMALL);			\
+	      error (INVALID_32BIT, "cmodel");			\
 	    }							\
 	}							\
     }								\
@@ -140,7 +176,7 @@ extern int dot_symbols;
 
 #undef	ASM_DEFAULT_SPEC
 #undef	ASM_SPEC
-#undef	LINK_OS_FREEBSD_SPEC
+#undef	LINK_SECURE_PLT_SPEC
 
 #ifndef	RS6000_BI_ARCH
 #define	ASM_DEFAULT_SPEC "-mcell"
@@ -172,7 +208,7 @@ extern int dot_symbols;
   ENDIAN_SELECT(" -mbig", " -mlittle", DEFAULT_ASM_ENDIAN)
 
 #undef	SUBSUBTARGET_EXTRA_SPECS
-#define SUBSUBTARGET_EXTRA_SPECS					\
+#define SUBSUBTARGET_EXTRA_SPECS \
   { "asm_spec_common",		ASM_SPEC_COMMON },			\
   { "asm_spec32",		ASM_SPEC32 },				\
   { "asm_spec64",		ASM_SPEC64 },				\
@@ -184,35 +220,94 @@ extern int dot_symbols;
   { "link_start_lv2",     LINK_START_LV2_SPEC },  \
   { "link_os_lv2",        LINK_OS_LV2_SPEC },             \
   { "cpp_os_lv2", CPP_OS_LV2_SPEC },                        \
-  { "link_os_freebsd_spec32",	LINK_OS_FREEBSD_SPEC32 }, \
-  { "link_os_freebsd_spec64",	LINK_OS_FREEBSD_SPEC64 },
+  { "link_os_extra_spec32",	LINK_OS_EXTRA_SPEC32 },			\
+  { "link_os_extra_spec64",	LINK_OS_EXTRA_SPEC64 },			\
+  { "link_os_new_dtags",	LINK_OS_NEW_DTAGS_SPEC },		\
+  { "include_extra",		INCLUDE_EXTRA_SPEC },			\
+  { "dynamic_linker_prefix",	DYNAMIC_LINKER_PREFIX }
 
-#define LINK_OS_FREEBSD_SPEC_DEF "\
-  %{p:%nconsider using `-pg' instead of `-p' with gprof(1)} \
-  %{v:-V} \
-  %{assert*} %{R*} %{rpath*} %{defsym*} \
-  %{shared:-Bshareable %{h*} %{soname*}} \
-  %{!shared: \
-    %{!static: \
-      %{rdynamic: -export-dynamic} \
-      %{!dynamic-linker:-dynamic-linker " FBSD_DYNAMIC_LINKER "}} \
-    %{static:-Bstatic}} \
-  %{symbolic:-Bsymbolic}"
+/* Optional specs used for overriding the system include directory, default
+   -rpath links, and prefix for the dynamic linker.  Normally, there are not
+   defined, but if the user configure with the --with-advance-toolchain=<xxx>
+   option, the advance-toolchain.h file will override these.  */
+#ifndef INCLUDE_EXTRA_SPEC
+#define INCLUDE_EXTRA_SPEC	""
+#endif
 
-#undef  DEFAULT_ASM_ENDIAN
-#define LINK_OS_FREEBSD_SPEC32 "-melf32ppc_fbsd " LINK_OS_FREEBSD_SPEC_DEF
-#if (TARGET_DEFAULT & MASK_LITTLE_ENDIAN)
-#define DEFAULT_ASM_ENDIAN " -mlittle"
-#define LINK_OS_FREEBSD_SPEC64 "-melf64lppc_fbsd " LINK_OS_FREEBSD_SPEC_DEF
-#else
-#define DEFAULT_ASM_ENDIAN " -mbig"
-#define LINK_OS_FREEBSD_SPEC64 "-melf64ppc_fbsd " LINK_OS_FREEBSD_SPEC_DEF
+#ifndef LINK_OS_EXTRA_SPEC32
+#define LINK_OS_EXTRA_SPEC32	""
+#endif
+
+#ifndef LINK_OS_EXTRA_SPEC64
+#define LINK_OS_EXTRA_SPEC64	""
+#endif
+
+#ifndef LINK_OS_NEW_DTAGS_SPEC
+#define LINK_OS_NEW_DTAGS_SPEC	""
+#endif
+
+#ifndef DYNAMIC_LINKER_PREFIX
+#define DYNAMIC_LINKER_PREFIX	""
 #endif
 
 #undef	MULTILIB_DEFAULTS
+#if DEFAULT_ARCH64_P
 #define MULTILIB_DEFAULTS { "m64" }
+#else
+#define MULTILIB_DEFAULTS { "m32" }
+#endif
 
-/* PowerPC-64 FreeBSD increases natural record alignment to doubleword if
+/* Split stack is only supported for 64 bit, and requires glibc >= 2.18.  */
+#if TARGET_GLIBC_MAJOR * 1000 + TARGET_GLIBC_MINOR >= 2018
+# ifndef RS6000_BI_ARCH
+#  define TARGET_CAN_SPLIT_STACK
+# else
+#  if DEFAULT_ARCH64_P
+/* Supported, and the default is -m64  */
+#   define TARGET_CAN_SPLIT_STACK_64BIT 1
+#  else
+/* Supported, and the default is -m32  */
+#   define TARGET_CAN_SPLIT_STACK_64BIT 0
+#  endif
+# endif
+#endif
+
+#ifndef RS6000_BI_ARCH
+
+/* 64-bit PowerPC Linux always has a TOC.  */
+#undef  TARGET_TOC
+#define	TARGET_TOC		1
+
+/* Some things from sysv4.h we don't do when 64 bit.  */
+#undef	OPTION_RELOCATABLE
+#define	OPTION_RELOCATABLE	0
+#undef	OPTION_EABI
+#define	OPTION_EABI		0
+#undef	OPTION_PROTOTYPE
+#define	OPTION_PROTOTYPE	0
+#undef RELOCATABLE_NEEDS_FIXUP
+#define RELOCATABLE_NEEDS_FIXUP 0
+
+#endif
+
+// TODO: Need to remove ?
+/* We use glibc _mcount for profiling.  */
+#define NO_PROFILE_COUNTERS 1
+#define PROFILE_HOOK(LABEL) \
+  do { if (TARGET_64BIT) output_profile_hook (LABEL); } while (0)
+
+/* PowerPC64 Linux word-aligns FP doubles when -malign-power is given.  */
+#undef  ADJUST_FIELD_ALIGN
+#define ADJUST_FIELD_ALIGN(FIELD, TYPE, COMPUTED) \
+  (rs6000_special_adjust_field_align_p ((TYPE), (COMPUTED))		\
+   ? 128								\
+   : (TARGET_64BIT							\
+      && TARGET_ALIGN_NATURAL == 0					\
+      && TYPE_MODE (strip_array_types (TYPE)) == DFmode)		\
+   ? MIN ((COMPUTED), 32)						\
+   : (COMPUTED))
+
+/* PowerPC64 Linux increases natural record alignment to doubleword if
    the first field is an FP double, only if in power alignment mode.  */
 #undef  ROUND_TYPE_ALIGN
 #define ROUND_TYPE_ALIGN(STRUCT, COMPUTED, SPECIFIED)			\
@@ -253,30 +348,25 @@ extern int dot_symbols;
 #define BLOCK_REG_PADDING(MODE, TYPE, FIRST) \
   (!(FIRST) ? PAD_UPWARD : targetm.calls.function_arg_padding (MODE, TYPE))
 
-/* FreeBSD doesn't support saving and restoring 64-bit regs with a 32-bit
-   kernel. This is supported when running on a 64-bit kernel with
-   COMPAT_FREEBSD32, but tell GCC it isn't so that our 32-bit binaries
-   are compatible. */
+/* Linux doesn't support saving and restoring 64-bit regs in a 32-bit
+   process.  */
 #define OS_MISSING_POWERPC64 !TARGET_64BIT
 
-#undef  FBSD_TARGET_CPU_CPP_BUILTINS
-#define FBSD_TARGET_CPU_CPP_BUILTINS()			\
+#undef  TARGET_OS_CPP_BUILTINS
+#define TARGET_OS_CPP_BUILTINS()			\
   do							\
     {							\
-      builtin_define ("__PPC__");			   \
-      builtin_define ("__ppc__");			   \
-      builtin_define ("__powerpc__");	   \
-      builtin_define ("__PPU__");			   \
-      builtin_define ("__lv2ppu__");	   \
-      builtin_define ("__CELLOS_LV2__"); \
-      builtin_define ("__LP32__");			 \
-      builtin_define ("__powerpc__");	   \
       if (TARGET_64BIT)					\
 	{						\
-	  builtin_define ("__arch64__");		\
-	  //builtin_define ("__LP64__");			\
+	  builtin_define ("__PPU__");			\
+	  builtin_define ("__PPC__");			\
 	  builtin_define ("__PPC64__");			\
+	  builtin_define ("__lv2ppu__");			\
+	  builtin_define ("__CELLOS_LV2__");			\
+	  builtin_define ("__powerpc__");		\
 	  builtin_define ("__powerpc64__");		\
+	  if (!DOT_SYMBOLS)				\
+	    builtin_define ("_CALL_LINUX");		\
 	  builtin_assert ("cpu=powerpc64");		\
 	  builtin_assert ("machine=powerpc64");		\
 	}						\
@@ -291,20 +381,20 @@ extern int dot_symbols;
     }							\
   while (0)
 
-#undef	CPP_OS_DEFAULT_SPEC
+#undef  CPP_OS_DEFAULT_SPEC
 #define CPP_OS_DEFAULT_SPEC "%(cpp_os_lv2) %(include_extra)"
 
-#undef CPP_OS_LV2_SPEC
-#define CPP_OS_LV2_SPEC "-D__lv2ppu__ -ffunction-sections -fdata-sections"  
+#undef  LINK_SHLIB_SPEC
+#define LINK_SHLIB_SPEC "%{shared:-shared} %{!shared: %{static:-static}}"
 
-#undef	STARTFILE_DEFAULT_SPEC
+#undef  LIB_DEFAULT_SPEC
+#define LIB_DEFAULT_SPEC "%(lib_lv2)"
+
+#undef  STARTFILE_DEFAULT_SPEC
 #define STARTFILE_DEFAULT_SPEC "%(startfile_lv2)"
 
 #undef	ENDFILE_DEFAULT_SPEC
 #define ENDFILE_DEFAULT_SPEC "%(endfile_lv2)"
-
-#undef	LIB_DEFAULT_SPEC
-#define LIB_DEFAULT_SPEC "%(lib_lv2)"
 
 #undef	LINK_START_DEFAULT_SPEC
 #define LINK_START_DEFAULT_SPEC "%(link_start_lv2)"
@@ -312,68 +402,87 @@ extern int dot_symbols;
 #undef	LINK_OS_DEFAULT_SPEC
 #define LINK_OS_DEFAULT_SPEC "%(link_os_lv2)"
 
-#undef	LIB_LV2_SPEC
-#define LIB_LV2_SPEC "-L %:getenv(PSL1GHT /ppu/lib) --start-group -lsysbase -lc -lrt -llv2 --end-group" // TODO: Change when new stubs are made, as all of them are meant to have _stub at the end (like -llv2_stub)
+#define LIB_LV2_SPEC "-L %:getenv(PSL1GHT /ppu/lib) --start-group -lsysbase -lc -lrt -llv2 --end-group"
 
-#undef	STARTFILE_LV2_SPEC
-#define STARTFILE_LV2_SPEC "lv2-crti.o%s crtbegin.o%s lv2-crt0.o%s lv2-sprx.o%s" // TODO: Change when new crts are made
+#define GLIBC_DYNAMIC_LINKER32 "%(dynamic_linker_prefix)/lib/ld.so.1"
 
-#undef	ENDFILE_LV2_SPEC
-#define ENDFILE_LV2_SPEC "crtend.o%s lv2-crtn.o%s" // TODO: Change when new crts are made
+#define STARTFILE_LV2_SPEC "lv2-crti.o%s crtbegin.o%s lv2-crt0.o%s lv2-sprx.o%s"
 
-#undef	LINK_START_LV2_SPEC
-#define LINK_START_LV2_SPEC "-T lv2.ld%s" // TODO: Change when new linker scripts are made
+#define ENDFILE_LV2_SPEC "crtend.o%s lv2-crtn.o%s"
 
-#undef	LINK_OS_LV2_SPEC32
+#define LINK_START_LV2_SPEC "-T lv2.ld%s"
 
-#undef	LINK_OS_LV2_SPEC64
+#define LINK_OS_LV2_SPEC32 "-m elf32ppc"
 #define LINK_OS_LV2_SPEC64 "-m elf64ppc_celloslv2"
 
-#undef	CPP_OS_LV2_SPEC
 #define CPP_OS_LV2_SPEC "-D__lv2ppu__ -ffunction-sections -fdata-sections"
 
-/* XXX: This is wrong for many platforms in sysv4.h.
-   We should work on getting that definition fixed.  */
-#undef  LINK_SHLIB_SPEC
-#define LINK_SHLIB_SPEC "%{shared:-shared} %{!shared: %{static:-static}}"
+#undef  DEFAULT_ASM_ENDIAN
+#if (TARGET_DEFAULT & MASK_LITTLE_ENDIAN)
+#define DEFAULT_ASM_ENDIAN " -mlittle"
+#define LINK_OS_LINUX_EMUL32 ENDIAN_SELECT(" -m elf32ppclinux",		\
+					   " -m elf32lppclinux",	\
+					   " -m elf32lppclinux")
+#define LINK_OS_LINUX_EMUL64 ENDIAN_SELECT(" -m elf64ppc_celloslv2",		\
+					   " -m elf64lppc",		\
+					   " -m elf64lppc")
+#else
+#define DEFAULT_ASM_ENDIAN " -mbig"
+#define LINK_OS_LINUX_EMUL32 ENDIAN_SELECT(" -m elf32ppclinux",		\
+					   " -m elf32lppclinux",	\
+					   " -m elf32ppclinux")
+#define LINK_OS_LINUX_EMUL64 ENDIAN_SELECT(" -m elf64ppc_celloslv2",		\
+					   " -m elf64lppc",		\
+					   " -m elf64ppc_celloslv2")
+#endif
 
+#undef  TOC_SECTION_ASM_OP
+#define TOC_SECTION_ASM_OP \
+  (TARGET_64BIT						\
+   ? "\t.section\t\".toc\",\"aw\""			\
+   : "\t.section\t\".got\",\"aw\"")
 
-/************************[  Target stuff  ]***********************************/
+#undef  MINIMAL_TOC_SECTION_ASM_OP
+#define MINIMAL_TOC_SECTION_ASM_OP \
+  (TARGET_64BIT						\
+   ? "\t.section\t\".toc1\",\"aw\""			\
+   : (flag_pic						\
+      ? "\t.section\t\".got2\",\"aw\""			\
+      : "\t.section\t\".got1\",\"aw\""))
 
-/* Define the actual types of some ANSI-mandated types.  
-   Needs to agree with <machine/ansi.h>.  GCC defaults come from c-decl.c,
-   c-common.c, and config/<arch>/<arch>.h.  */
+/* Must be at least as big as our pointer type.  */
+#undef	SIZE_TYPE
+#define	SIZE_TYPE (TARGET_64BIT ? "long unsigned int" : "unsigned int")
 
+#undef	PTRDIFF_TYPE
+#define	PTRDIFF_TYPE (TARGET_64BIT ? "long int" : "int")
 
-#undef  SIZE_TYPE
-#define SIZE_TYPE (TARGET_64BIT ? "long unsigned int" : "unsigned int")
-
-#undef  PTRDIFF_TYPE
-#define PTRDIFF_TYPE	(TARGET_64BIT ? "long int" : "int")
-
-/* rs6000.h gets this wrong for FreeBSD.  We use the GCC defaults instead.  */
-#undef WCHAR_TYPE
-
+#undef	WCHAR_TYPE
+#define	WCHAR_TYPE (TARGET_64BIT ? "int" : "long int")
 #undef  WCHAR_TYPE_SIZE
 #define WCHAR_TYPE_SIZE 32
 
-/* Function profiling bits */
 #undef  RS6000_MCOUNT
 #define RS6000_MCOUNT "_mcount"
 
-#define PROFILE_HOOK(LABEL) \
-  do { if (TARGET_64BIT) output_profile_hook (LABEL); } while (0)
-
+#ifdef __powerpc64__
 /* _init and _fini functions are built from bits spread across many
    object files, each potentially with a different TOC pointer.  For
    that reason, place a nop after the call so that the linker can
    restore the TOC pointer if a TOC adjusting call stub is needed.  */
-#ifdef __powerpc64__
+#if DOT_SYMBOLS
+#define CRT_CALL_STATIC_FUNCTION(SECTION_OP, FUNC)	\
+  asm (SECTION_OP "\n"					\
+"	bl ." #FUNC "\n"				\
+"	nop\n"						\
+"	.previous");
+#else
 #define CRT_CALL_STATIC_FUNCTION(SECTION_OP, FUNC)	\
   asm (SECTION_OP "\n"					\
 "	bl " #FUNC "\n"					\
 "	nop\n"						\
 "	.previous");
+#endif
 #endif
 
 /* FP save and restore routines.  */
@@ -386,6 +495,57 @@ extern int dot_symbols;
 #undef  RESTORE_FP_SUFFIX
 #define RESTORE_FP_SUFFIX ""
 
+/* Dwarf2 debugging.  */
+#undef  PREFERRED_DEBUGGING_TYPE
+#define PREFERRED_DEBUGGING_TYPE DWARF2_DEBUG
+
+/* This is how to declare the size of a function.  */
+#undef	ASM_DECLARE_FUNCTION_SIZE
+#define	ASM_DECLARE_FUNCTION_SIZE(FILE, FNAME, DECL)			\
+  do									\
+    {									\
+      if (!flag_inhibit_size_directive)					\
+	{								\
+	  fputs ("\t.size\t", (FILE));					\
+	  if (TARGET_64BIT && DOT_SYMBOLS)				\
+	    putc ('.', (FILE));						\
+	  assemble_name ((FILE), (FNAME));				\
+	  fputs (",.-", (FILE));					\
+	  rs6000_output_function_entry (FILE, FNAME);			\
+	  putc ('\n', (FILE));						\
+	}								\
+    }									\
+  while (0)
+
+/* Return nonzero if this entry is to be written into the constant
+   pool in a special way.  We do so if this is a SYMBOL_REF, LABEL_REF
+   or a CONST containing one of them.  If -mfp-in-toc (the default),
+   we also do this for floating-point constants.  We actually can only
+   do this if the FP formats of the target and host machines are the
+   same, but we can't check that since not every file that uses
+   the macros includes real.h.  We also do this when we can write the
+   entry into the TOC and the entry is not larger than a TOC entry.  */
+
+#undef  ASM_OUTPUT_SPECIAL_POOL_ENTRY_P
+#define ASM_OUTPUT_SPECIAL_POOL_ENTRY_P(X, MODE)			\
+  (TARGET_TOC								\
+   && (SYMBOL_REF_P (X)							\
+       || (GET_CODE (X) == CONST && GET_CODE (XEXP (X, 0)) == PLUS	\
+	   && SYMBOL_REF_P (XEXP (XEXP (X, 0), 0)))			\
+       || GET_CODE (X) == LABEL_REF					\
+       || (CONST_INT_P (X)						\
+	   && TARGET_CMODEL != CMODEL_MEDIUM				\
+	   && GET_MODE_BITSIZE (MODE) <= GET_MODE_BITSIZE (Pmode))	\
+       || (CONST_DOUBLE_P (X)						\
+	   && ((TARGET_64BIT						\
+		&& (TARGET_MINIMAL_TOC					\
+		    || (SCALAR_FLOAT_MODE_P (GET_MODE (X))		\
+			&& ! TARGET_NO_FP_IN_TOC)))			\
+	       || (!TARGET_64BIT					\
+		   && !TARGET_NO_FP_IN_TOC				\
+		   && SCALAR_FLOAT_MODE_P (GET_MODE (X))		\
+		   && BITS_PER_WORD == HOST_BITS_PER_INT)))))
+
 /* Select a format to encode pointers in exception handling data.  CODE
    is 0 for data, 1 for code labels, 2 for function pointers.  GLOBAL is
    true if the symbol may be affected by dynamic relocations.  */
@@ -396,89 +556,41 @@ extern int dot_symbols;
       | (TARGET_64BIT ? DW_EH_PE_udata8 : DW_EH_PE_sdata4))		\
    : DW_EH_PE_absptr)
 
+/* For backward compatibility, we must continue to use the AIX
+   structure return convention.  */
+#undef DRAFT_V4_STRUCT_RET
+#define DRAFT_V4_STRUCT_RET (!TARGET_64BIT)
+
+#ifdef TARGET_LIBC_PROVIDES_SSP
+/* ppc32 glibc provides __stack_chk_guard in -0x7008(2),
+   ppc64 glibc provides it at -0x7010(13).  */
+#define TARGET_THREAD_SSP_OFFSET	(TARGET_64BIT ? -0x7010 : -0x7008)
+#endif
+
+#define POWERPC_CELL64LV2
+
+#define POINTERS_EXTEND_UNSIGNED 1
+
+/* ppc{32,64} linux has 128-bit long double support in glibc 2.4 and later.  */
+#ifdef TARGET_DEFAULT_LONG_DOUBLE_128
+#define RS6000_DEFAULT_LONG_DOUBLE_SIZE 128
+#endif
+
 /* Static stack checking is supported by means of probes.  */
 #define STACK_CHECK_STATIC_BUILTIN 1
 
 /* The default value isn't sufficient in 64-bit mode.  */
 #define STACK_CHECK_PROTECT (TARGET_64BIT ? 16 * 1024 : 12 * 1024)
 
-/* Use standard DWARF numbering for DWARF debugging information.  */
-#define RS6000_USE_DWARF_NUMBERING
-
-/* PowerPC64 Linux word-aligns FP doubles when -malign-power is given.  */
-#undef  ADJUST_FIELD_ALIGN
-#define ADJUST_FIELD_ALIGN(FIELD, TYPE, COMPUTED) \
-  (rs6000_special_adjust_field_align_p ((TYPE), (COMPUTED))		\
-   ? 128                                                                \
-   : (TARGET_64BIT                                                      \
-      && TARGET_ALIGN_NATURAL == 0                                      \
-      && TYPE_MODE (strip_array_types (TYPE)) == DFmode)   		\
-   ? MIN ((COMPUTED), 32)                                               \
-   : (COMPUTED))
-
-#undef  TOC_SECTION_ASM_OP
-#define TOC_SECTION_ASM_OP \
-  (TARGET_64BIT                                         \
-   ? "\t.section\t\".toc\",\"aw\""                      \
-   : "\t.section\t\".got\",\"aw\"")
-
-#undef  MINIMAL_TOC_SECTION_ASM_OP
-#define MINIMAL_TOC_SECTION_ASM_OP \
-  (TARGET_64BIT                                         \
-   ? "\t.section\t\".toc1\",\"aw\""                     \
-   : (flag_pic						\
-      ? "\t.section\t\".got2\",\"aw\""                  \
-      : "\t.section\t\".got1\",\"aw\""))
-
-/* This is how to declare the size of a function.  */
-#undef  ASM_DECLARE_FUNCTION_SIZE
-#define ASM_DECLARE_FUNCTION_SIZE(FILE, FNAME, DECL)                    \
-  do                                                                    \
-    {                                                                   \
-      if (!flag_inhibit_size_directive)                                 \
-        {                                                               \
-          fputs ("\t.size\t", (FILE));                                  \
-          if (TARGET_64BIT && DOT_SYMBOLS)                              \
-            putc ('.', (FILE));                                         \
-          assemble_name ((FILE), (FNAME));                              \
-          fputs (",.-", (FILE));                                        \
-          rs6000_output_function_entry (FILE, FNAME);                   \
-          putc ('\n', (FILE));                                          \
-        }                                                               \
-    }                                                                   \
-  while (0)
-
-#undef  ASM_OUTPUT_SPECIAL_POOL_ENTRY_P
-#define ASM_OUTPUT_SPECIAL_POOL_ENTRY_P(X, MODE)                        \
-  (TARGET_TOC                                                           \
-   && (SYMBOL_REF_P (X)							\
-       || (GET_CODE (X) == CONST && GET_CODE (XEXP (X, 0)) == PLUS      \
-           && SYMBOL_REF_P (XEXP (XEXP (X, 0), 0)))			\
-       || GET_CODE (X) == LABEL_REF                                     \
-       || (CONST_INT_P (X)						\
-           && GET_MODE_BITSIZE (MODE) <= GET_MODE_BITSIZE (Pmode))      \
-       || (CONST_DOUBLE_P (X)						\
-           && ((TARGET_64BIT                                            \
-                && (TARGET_MINIMAL_TOC                                  \
-                    || (SCALAR_FLOAT_MODE_P (GET_MODE (X))              \
-                        && ! TARGET_NO_FP_IN_TOC)))                     \
-               || (!TARGET_64BIT                                        \
-                   && !TARGET_NO_FP_IN_TOC                              \
-                   && SCALAR_FLOAT_MODE_P (GET_MODE (X))                \
-                   && BITS_PER_WORD == HOST_BITS_PER_INT)))))
-
-/* Use --as-needed -lgcc_s for eh support.  */
-#ifdef HAVE_LD_AS_NEEDED
-#define USE_LD_AS_NEEDED 1
+/* Support for TARGET_ATOMIC_ASSIGN_EXPAND_FENV without FPRs depends
+   on glibc 2.19 or greater.  */
+#if TARGET_GLIBC_MAJOR > 2 \
+  || (TARGET_GLIBC_MAJOR == 2 && TARGET_GLIBC_MINOR >= 19)
+#define RS6000_GLIBC_ATOMIC_FENV 1
 #endif
 
-#define POWERPC_CELLOSLV2
-
-#define POINTERS_EXTEND_UNSIGNED 1
-
-#ifdef  TARGET_DEFAULT_LONG_DOUBLE_128
-#define RS6000_DEFAULT_LONG_DOUBLE_SIZE 128
-#endif
-
+/* The IEEE 128-bit emulator is only built on Linux systems.  Flag that we
+   should enable the type handling for KFmode on VSX systems even if we are not
+   enabling the __float128 keyword.  */
 #undef	TARGET_FLOAT128_ENABLE_TYPE
 #define TARGET_FLOAT128_ENABLE_TYPE 1

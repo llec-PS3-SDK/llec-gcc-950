@@ -55,3 +55,7 @@ REVISION
 /mpc*
 /gmp*
 /isl*
+
+build-ppu
+newlib
+libgloss

@@ -1424,8 +1424,8 @@ rtl_opt_pass *make_pass_analyze_swaps (gcc::context*);
 static bool rs6000_keep_leaf_when_profiled () __attribute__ ((unused));
 static tree rs6000_fold_builtin (tree, int, tree *, bool);
 
-#ifdef POWERPC_CELLOSLV2
-static bool rs6000_cell64lv2_valid_pointer_mode(enum machine_mode);
+#ifdef POWERPC_CELL64LV2
+static bool rs6000_cell64lv2_valid_pointer_mode(scalar_int_mode);
 #endif
 
 /* Hash table stuff for keeping track of TOC entries.  */
@@ -1790,11 +1790,11 @@ static const struct attribute_spec rs6000_attribute_table[] =
 #undef TARGET_BUILD_BUILTIN_VA_LIST
 #define TARGET_BUILD_BUILTIN_VA_LIST rs6000_build_builtin_va_list
 
-#ifdef POWERPC_CELLOSLV2
+#ifdef POWERPC_CELL64LV2
 #undef TARGET_VALID_POINTER_MODE
 #define TARGET_VALID_POINTER_MODE rs6000_cell64lv2_valid_pointer_mode
 
-static bool rs6000_cell64lv2_valid_pointer_mode(enum machine_mode mode)
+static bool rs6000_cell64lv2_valid_pointer_mode(scalar_int_mode mode)
 {
 	return (mode == SImode || (TARGET_64BIT && mode == DImode) || mode == ptr_mode || mode == Pmode);
 }
@@ -3866,7 +3866,7 @@ rs6000_option_override_internal (bool global_init_p)
   /* Set the pointer size.  */
   if (TARGET_64BIT)
     {
-#ifndef POWERPC_CELLOSLV2
+#ifndef POWERPC_CELL64LV2
       rs6000_pmode = DImode;
       rs6000_pointer_size = 64;
 #else

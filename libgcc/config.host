@@ -1136,6 +1136,8 @@ powerpc-*-rtems*)
 	;;
 powerpc64-*-celloslv2)
 	;;
+powerpc64-ps3-elf)
+	;;
 powerpc*-*-linux*)
 	tmake_file="${tmake_file} rs6000/t-ppccomm rs6000/t-savresfgpr rs6000/t-crtstuff rs6000/t-linux t-dfprules rs6000/t-ppc64-fp t-slibgcc-libgcc"
 	tmake_file="${tmake_file} t-stack rs6000/t-stack-rs6000"
